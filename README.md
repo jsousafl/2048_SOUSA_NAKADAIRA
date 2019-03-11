@@ -1,11 +1,11 @@
 # 2048_SOUSA_NAKADAIRA
 Replica of the game 2048 with QT and QML
 
-Authors:
+##Authors:
 
   SOUSA FLORIANO João 
   NETO NAKADAIRA Lucas
   
-Description:
+##Description:
 
-Installing:
+##Installing:
