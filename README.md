@@ -10,3 +10,5 @@ Replica of the game 2048 with QT and QML
 ## Description:
 
 ## Installing:
+
+	Test phrase
