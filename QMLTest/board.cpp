@@ -299,11 +299,12 @@ void Board::checkforPairs(int id_mov, bool command_fusion)
 }
 void Board::goUP()
 {
+    winGame();
+    endGame();
     if(status == 'P'){
         vector<int> index_mobileBlocks;
         int col_aux;
         bool command_fusion = verifyCommand(1);
-        cout<<command_fusion<<endl;
         checkforPairs(1,command_fusion); //make fusion of fusionable elements
         cout<<"Passou pela fusao"<<endl;
         index_mobileBlocks = checkMouvLimits(1); //getting index vector of mobile blocks
@@ -326,6 +327,8 @@ void Board::goUP()
 }
 void Board::goDown()
 {
+    winGame();
+    endGame();
     if(status == 'P'){
         vector<int> index_mobileBlocks;
         int col_aux,aux_index1;
@@ -352,6 +355,8 @@ void Board::goDown()
 }
 void Board::goLeft()
 {
+    winGame();
+    endGame();
     if(status == 'P'){
         vector<int> index_mobileBlocks;
         int row_aux,index_row;
@@ -378,6 +383,8 @@ void Board::goLeft()
 }
 void Board::goRight()
 {
+    winGame();
+    endGame();
     if(status == 'P'){
         vector<int> index_mobileBlocks;
         int row_aux,index_end_row;
@@ -486,7 +493,7 @@ void Board::savegame(){
         delete histIntTAB[i];
     }
     delete [] histIntTAB;
-
+    cout<<status<<endl;
     histIntTAB = aux_int;
     countnewround();
 }
@@ -554,6 +561,7 @@ void Board::setdimension(int dim)
 void Board::newGame()
 {
     setround(1);
+    setstatus('P');
     for (int i=0;i<dimension*dimension;i++)
     {
         TABAct[i]->setvalue(0);
@@ -562,6 +570,34 @@ void Board::newGame()
     savegame();
     boardSignal();
 }
+
+void Board::endGame(){
+    bool verify_zeros = true;
+    for(int i=0;i<dimension*dimension;i++) {
+        if(TABAct[i]->getvalue()!=0){
+            verify_zeros = false;
+        }
+    }
+    if(verify_zeros){
+        for (int i=1;i<5;i++) {
+            verifyCommand(i);
+        }
+        if(fusion_possible==false){
+            setstatus('L');
+            cout << "You lost." << endl;
+        }
+    }
+}
+
+void Board::winGame(){
+    for(int i=0;i<dimension*dimension;i++) {
+        if(TABAct[i]->getvalue()==2048){
+            setstatus('L');
+            cout << "You won !" << endl;
+        }
+    }
+}
+
 void Board::undoPlay()
 {
     if(nb_rounds>2){

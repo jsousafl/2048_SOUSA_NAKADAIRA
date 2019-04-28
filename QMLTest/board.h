@@ -22,6 +22,8 @@ public:
     //Game methods
     Q_INVOKABLE void newGame();
     Q_INVOKABLE void undoPlay();
+    void endGame();
+    void winGame();
 
     //Set Methods
     Q_INVOKABLE void setdimension(int dim);
