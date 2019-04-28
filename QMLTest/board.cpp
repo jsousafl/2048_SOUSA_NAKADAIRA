@@ -9,8 +9,8 @@ Board::Board(QObject *parent) : QObject(parent)
     score = 0;
     bestscore = 0;
     nb_rounds = 0;
-    end = false;
     status = 'P';
+    fusion_possible = false;
     QMLBlockIndexX = 0;
     QMLBlockIndexY = 0;
     QMLBlockIndexColor = 0;
@@ -18,6 +18,7 @@ Board::Board(QObject *parent) : QObject(parent)
     QMLBlockIndexTextColor = 0;
     allocateActualBoard();
     createNewBlock(true);
+    savegame();
     boardSignal();
 }
 
@@ -33,31 +34,33 @@ void Board::createNewBlock(bool flag_start)
             indexNullBlocs.push_back(i);
         }
     }
-    random_integer = rand()% indexNullBlocs.size();
-    nblock_index = indexNullBlocs[random_integer];
+    if(indexNullBlocs.size()>0){
+        random_integer = rand()% indexNullBlocs.size();
+        nblock_index = indexNullBlocs[random_integer];
 
 
-    if(flag_start==false)
-    {
-       vector<int> values = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,4}; //85% of 2 and 15% of 4
-       random_integer = rand() % values.size();
-       TABAct[nblock_index]->setvalue(values[random_integer]); //new block can be a 2 or a 4
+        if(flag_start==false)
+        {
+           vector<int> values = {2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4,4,4}; //85% of 2 and 15% of 4
+           random_integer = rand() % values.size();
+           TABAct[nblock_index]->setvalue(values[random_integer]); //new block can be a 2 or a 4
+        }
+        else
+        {
+            TABAct[nblock_index]->setvalue(2);
+        }
     }
-    else
-    {
-        TABAct[nblock_index]->setvalue(2);
-    }
-
     // Mise a jour du score
     for (int i =0;i<dimension*dimension;i++)
     {
         somme_score += TABAct[i]->getvalue();
     }
-    //setscore(somme_score);
+    setscore(somme_score);
 
     // Mise a jour du bestscore
     if (bestscore < somme_score)
         setbestscore(somme_score);
+
 }
 
 //Fusion and mouvement
@@ -109,25 +112,24 @@ vector<int> Board::checkMouvLimits(int id_mov)
         break;
 
     }
-    if(index_mobileBlocks.empty())
-    {
-        setstatus('L');
-        //call end game
-    }
     return index_mobileBlocks;
 }
 void Board::fusionBlocks(int indexreceiver, int indexsender)
 {
     TABAct[indexreceiver]->setvalue(2*(TABAct[indexsender]->getvalue()));;
     TABAct[indexsender]->setvalue(0);
-
+    fusion_possible = false;
 }
 void Board::moveBlocks(int indexreceiver, int indexsender)
 {
     TABAct[indexreceiver]->setvalue((TABAct[indexsender]->getvalue()));;
     TABAct[indexsender]->setvalue(0);
 }
-void Board::checkforPairs(int id_mov)
+bool Board::verifyCommand(int id_move){
+    checkforPairs(id_move,false);
+    return fusion_possible;
+}
+void Board::checkforPairs(int id_mov, bool command_fusion)
 {
     int aux_index1,aux_index2,aux_count,lim_inf;
         switch (id_mov)
@@ -149,7 +151,11 @@ void Board::checkforPairs(int id_mov)
                         {
                             if(TABAct[j]->getvalue()==TABAct[aux_count]->getvalue())
                             {
-                                fusionBlocks(j,aux_count);//fusion
+                                fusion_possible = true;
+                                if(command_fusion){
+                                    fusionBlocks(j,aux_count);//fusion
+                                }
+
                                 aux_count = aux_index1+dimension+1; //stop searching for fusion
                             }
                             else if(TABAct[aux_count]->getvalue()!=0)
@@ -183,7 +189,12 @@ void Board::checkforPairs(int id_mov)
                         {
                             if(TABAct[j]->getvalue()==TABAct[aux_count]->getvalue())
                             {
-                                fusionBlocks(j,aux_count);//fusion
+                                fusion_possible = true;
+                                if(command_fusion){
+                                    fusionBlocks(j,aux_count);//fusion
+                                }
+
+
                                 aux_count = lim_inf-dimension-1; //stop searching for fusion
                             }
                             else if(TABAct[aux_count]->getvalue()!=0)
@@ -220,7 +231,12 @@ void Board::checkforPairs(int id_mov)
                         {
                             if(TABAct[j]->getvalue()==TABAct[aux_count]->getvalue())
                             {
-                                fusionBlocks(j,aux_count);//fusion
+
+                                fusion_possible = true;
+                                if(command_fusion){
+                                    fusionBlocks(j,aux_count);//fusion
+                                }
+
                                 aux_count = aux_index1+2 ; //stop searching for fusion
                             }
                             else if(TABAct[aux_count]->getvalue()!=0)
@@ -257,7 +273,12 @@ void Board::checkforPairs(int id_mov)
                         {
                             if(TABAct[j]->getvalue()==TABAct[aux_count]->getvalue())
                             {
-                                fusionBlocks(j,aux_count);//fusion
+
+                                fusion_possible = true;
+                                if(command_fusion){
+                                    fusionBlocks(j,aux_count);//fusion
+                                }
+
                                 aux_count = lim_inf-2 ; //stop searching for fusion
                             }
                             else if(TABAct[aux_count]->getvalue()!=0)
@@ -278,96 +299,109 @@ void Board::checkforPairs(int id_mov)
 }
 void Board::goUP()
 {
-    vector<int> index_mobileBlocks;
-    int col_aux;
-    checkforPairs(1); //make fusion of fusionable elements
-    index_mobileBlocks = checkMouvLimits(1); //getting index vector of mobile blocks
-    for (auto & index : index_mobileBlocks) //iterating within the index vector
-    {
-        col_aux = TABAct[index]->getcol();
-        for (int i=col_aux;i<index;i=i+dimension)  //searching for 0 above the mobile block
+    if(status == 'P'){
+        vector<int> index_mobileBlocks;
+        int col_aux;
+        bool command_fusion = verifyCommand(1);
+        cout<<command_fusion<<endl;
+        checkforPairs(1,command_fusion); //make fusion of fusionable elements
+        cout<<"Passou pela fusao"<<endl;
+        index_mobileBlocks = checkMouvLimits(1); //getting index vector of mobile blocks
+        for (auto & index : index_mobileBlocks) //iterating within the index vector
         {
-            if(TABAct[i]->getvalue()==0)
+            col_aux = TABAct[index]->getcol();
+            for (int i=col_aux;i<index;i=i+dimension)  //searching for 0 above the mobile block
             {
-                moveBlocks(i,index);//already found the position to move
-                break;
+                if(TABAct[i]->getvalue()==0)
+                {
+                    moveBlocks(i,index);//already found the position to move
+                    break;
+                }
             }
         }
+        createNewBlock(false);
+        savegame();
+        boardSignal();
     }
-    savegame();
-    createNewBlock(false);
-    boardSignal();
 }
 void Board::goDown()
 {
-    vector<int> index_mobileBlocks;
-    int col_aux,aux_index1;
-    checkforPairs(2); //make fusion of fusionable elements
-    index_mobileBlocks = checkMouvLimits(2); //getting index vector of mobile blocks
-    for (auto & index : index_mobileBlocks) //iterating within the index vector
-    {
-        col_aux = TABAct[index]->getcol();
-        aux_index1 = dimension*(dimension-1);
-        for (int i=col_aux+aux_index1;i>index;i=i-dimension)  //searching for 0 above the mobile block
+    if(status == 'P'){
+        vector<int> index_mobileBlocks;
+        int col_aux,aux_index1;
+        bool command_fusion = verifyCommand(2);
+        checkforPairs(2,command_fusion); //make fusion of fusionable elements
+        index_mobileBlocks = checkMouvLimits(2); //getting index vector of mobile blocks
+        for (auto & index : index_mobileBlocks) //iterating within the index vector
         {
-            if(TABAct[i]->getvalue()==0)
+            col_aux = TABAct[index]->getcol();
+            aux_index1 = dimension*(dimension-1);
+            for (int i=col_aux+aux_index1;i>index;i=i-dimension)  //searching for 0 above the mobile block
             {
-                moveBlocks(i,index);
-                break; //already found the position to move
+                if(TABAct[i]->getvalue()==0)
+                {
+                    moveBlocks(i,index);
+                    break; //already found the position to move
+                }
             }
         }
+        createNewBlock(false);
+        savegame();
+        boardSignal();
     }
-    savegame();
-    createNewBlock(false);
-    boardSignal();
 }
 void Board::goLeft()
 {
-    vector<int> index_mobileBlocks;
-    int row_aux,index_row;
-    checkforPairs(3); //make fusion of fusionable elements
-    index_mobileBlocks = checkMouvLimits(3); //getting index vector of mobile blocks
-    for (auto & index : index_mobileBlocks) //iterating within the index vector
-    {
-        row_aux = TABAct[index]->getrow();
-        index_row = row_aux*dimension;
-        for (int i=index_row;i<index;i++)  //searching for 0 above the mobile block
+    if(status == 'P'){
+        vector<int> index_mobileBlocks;
+        int row_aux,index_row;
+        bool command_fusion = verifyCommand(3);
+        checkforPairs(3,command_fusion); //make fusion of fusionable elements
+        index_mobileBlocks = checkMouvLimits(3); //getting index vector of mobile blocks
+        for (auto & index : index_mobileBlocks) //iterating within the index vector
         {
-            if(TABAct[i]->getvalue()==0)
+            row_aux = TABAct[index]->getrow();
+            index_row = row_aux*dimension;
+            for (int i=index_row;i<index;i++)  //searching for 0 above the mobile block
             {
-                moveBlocks(i,index);//already found the position to move
-                break;
+                if(TABAct[i]->getvalue()==0)
+                {
+                    moveBlocks(i,index);//already found the position to move
+                    break;
+                }
             }
         }
+        createNewBlock(false);
+        savegame();
+        boardSignal();
     }
-    savegame();
-    createNewBlock(false);
-    boardSignal();
 }
 void Board::goRight()
 {
-    vector<int> index_mobileBlocks;
-    int row_aux,index_end_row;
-    checkforPairs(4); //make fusion of fusionable elements
-    index_mobileBlocks = checkMouvLimits(4); //getting index vector of mobile blocks
-    for (auto & index : index_mobileBlocks) //iterating within the index vector
-    {
-        row_aux = TABAct[index]->getrow();
-        index_end_row = (row_aux+1)*dimension - 1;
-        for (int i=index_end_row;i>index;i=i-1)  //searching for 0 above the mobile block
+    if(status == 'P'){
+        vector<int> index_mobileBlocks;
+        int row_aux,index_end_row;
+        bool command_fusion = verifyCommand(4);
+        checkforPairs(4,command_fusion); //make fusion of fusionable elements
+        index_mobileBlocks = checkMouvLimits(4); //getting index vector of mobile blocks
+        for (auto & index : index_mobileBlocks) //iterating within the index vector
         {
-            if(TABAct[i]->getvalue()==0)
+            row_aux = TABAct[index]->getrow();
+            index_end_row = (row_aux+1)*dimension - 1;
+            for (int i=index_end_row;i>index;i=i-1)  //searching for 0 above the mobile block
             {
-                moveBlocks(i,index);//already found the position to move
-                break;
+                if(TABAct[i]->getvalue()==0)
+                {
+                    moveBlocks(i,index);//already found the position to move
+                    break;
+                }
             }
         }
-    }    
-    savegame();
-    createNewBlock(false);
-    boardSignal();
+        createNewBlock(false);
+        savegame();
+        boardSignal();
+    }
 }
-
 //Gestion de memoire
 void Board::allocateActualBoard()
 {
@@ -388,8 +422,16 @@ void Board::allocateActualBoard()
             TABAct[i] = new Block(row_count,col_count);
         }
     }
-    histVecTAB = new Block**[1];
-    histVecTAB[0] = TABAct;
+    histIntTAB = new int**[1];
+    histIntTAB[0] = new int*[dimension];
+    for(int i=0;i<dimension;i++){
+        (histIntTAB[0])[i] = new int[dimension];
+    }
+    for(int i=0;i<dimension;i++){
+        for(int j=0; j<dimension; j++){
+            ((histIntTAB[0])[i])[j] = TABAct[j+dimension*i]->getvalue();
+        }
+    }
     countnewround();
     setscore(nb_rounds);
 }
@@ -402,47 +444,53 @@ void Board::destroyActualBoard()
             delete TABAct[i];
         }
         delete [] TABAct;
-        for (int i=0;i<nb_rounds;i++)
-        {
-            delete histVecTAB[i];
+        for(int i=0;i<nb_rounds;i++){
+            for(int j=0;j<dimension;j++){
+                delete (histIntTAB[i])[j];
+            }
+            delete histIntTAB[i];
         }
-        delete histVecTAB;
-        histVecTAB = NULL;
+        delete [] histIntTAB;
+        histIntTAB = NULL;
         TABAct = NULL;
     }
 }
 void Board::savegame(){
-    Block*** block_aux;
-    int value;
-    block_aux = new Block**[nb_rounds];
-    for(int i=0;i<nb_rounds;i++){
-        block_aux[i] = histVecTAB[i];
+    int*** aux_int;
+    aux_int = new int**[nb_rounds+1];
+    for(int i=0;i<nb_rounds+1;i++){
+        aux_int[i] = new int*[dimension];
     }
-    delete histVecTAB;
-    histVecTAB = new Block**[nb_rounds+1];
-    for(int i=0;i<nb_rounds;i++){
-        histVecTAB[i] = block_aux[i];
-    }
-    delete block_aux;
-    //Block** Aux = histVecTAB[nb_rounds];
-    //for (int i=0;i<dimension*dimension;i++)
-    //{
-    //    value = TABAct[i]->getvalue();
-    //    (histVecTAB[nb_rounds])[i]->setvalue(value);
-    //}
-    histVecTAB[nb_rounds] = TABAct;
-    countnewround();
-    setscore(nb_rounds);
-}
-void Board::endGame(){
-    for(int i=0;i<dimension*dimension;i++)
-    {
-        if(TABAct[i]->getvalue()==0){
-            end = false;
-            break;
+    for(int i=0;i<nb_rounds+1;i++){
+        for(int j=0;j<dimension;j++){
+            (aux_int[i])[j] = new int[dimension];
         }
     }
+    for(int i=0;i<nb_rounds;i++){
+        for(int j=0;j<dimension;j++){
+            for(int k=0; k<dimension; k++){
+                ((aux_int[i])[j])[k] = ((histIntTAB[i])[j])[k];
+            }
+        }
+    }
+    for(int i=0;i<dimension;i++){
+        for(int j=0; j<dimension; j++){
+            ((aux_int[nb_rounds])[i])[j] = TABAct[i+dimension*j]->getvalue();
+        }
+    }
+
+    for(int i=0;i<nb_rounds;i++){
+        for(int j=0;j<dimension;j++){
+            delete (histIntTAB[i])[j];
+        }
+        delete histIntTAB[i];
+    }
+    delete [] histIntTAB;
+
+    histIntTAB = aux_int;
+    countnewround();
 }
+
 
 //gets
 int Board::getscore()
@@ -511,19 +559,36 @@ void Board::newGame()
         TABAct[i]->setvalue(0);
     }
     createNewBlock(true);
+    savegame();
     boardSignal();
 }
 void Board::undoPlay()
 {
-    int value;
-    histVecTAB[nb_rounds-1] = NULL;
-    nb_rounds -= 1;
-    for (int i=0;i<dimension*dimension;i++)
-    {
-        value = (histVecTAB[nb_rounds-1])[i]->getvalue();
-        TABAct[i]->setvalue(value);
+    if(nb_rounds>2){
+        int** new_intTAB;
+        int value;
+        nb_rounds -= 1;
+        new_intTAB = histIntTAB[nb_rounds-1];
+        for(int i=0;i<dimension;i++){
+            for(int j=0; j<dimension; j++){
+                value = new_intTAB[i][j];
+                TABAct[i+dimension*j]->setvalue(value);
+            }
+        }
+        int somme_score=0;
+
+        // Mise a jour du score
+        for (int i =0;i<dimension*dimension;i++)
+        {
+            somme_score += TABAct[i]->getvalue();
+        }
+        setscore(somme_score);
+
+        // Mise a jour du bestscore
+        if (bestscore < somme_score)
+            setbestscore(somme_score);
+        boardSignal();
     }
-    boardSignal();
 }
 
 //Sending data to GUI

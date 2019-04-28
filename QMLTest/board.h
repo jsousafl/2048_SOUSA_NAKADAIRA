@@ -45,7 +45,7 @@ public:
 
     //Mouvement methods
     vector<int> checkMouvLimits(int id_mov);
-    void checkforPairs(int id_mov);
+    void checkforPairs(int id_mov, bool command_fusion);
     Q_INVOKABLE void goUP();
     Q_INVOKABLE void goDown();
     Q_INVOKABLE void goLeft();
@@ -54,6 +54,7 @@ public:
     void fusionBlocks(int indexreceiver, int indexsender);
     void moveBlocks(int indexreceiver, int indexsender);
     void createNewBlock(bool flag_start);
+    bool verifyCommand(int id_move);
 
     //GUI Methods
     Q_PROPERTY(QString blocknumber READ sendBlocknumber NOTIFY boardSignal)
@@ -79,18 +80,18 @@ private:
     int QMLBlockIndexTextColor;
 
     Block** TABAct;
-    Block*** histVecTAB;
+    int*** histIntTAB;
     int dimension;
     int score;
     int nb_rounds;
     int bestscore;
-    int end;
+    bool end_game;
+    bool fusion_possible;
     char status; //W->winner, L->>loser, P->playing
 
     void allocateActualBoard();
     void destroyActualBoard();
     void savegame();
-    void endGame();
 
 };
 
