@@ -1,6 +1,7 @@
 #include "board.h"
 #include <iostream>
 
+
 using namespace std;
 
 Board::Board(QObject *parent) : QObject(parent)
@@ -8,9 +9,11 @@ Board::Board(QObject *parent) : QObject(parent)
     dimension = 4;
     score = 0;
     bestscore = 0;
-    nb_rounds = 0;
+    nb_rounds = 1;
     status = 'P';
     fusion_possible = false;
+    verify_win = false;
+    verify_lost = false;
     QMLBlockIndexX = 0;
     QMLBlockIndexY = 0;
     QMLBlockIndexColor = 0;
@@ -124,6 +127,7 @@ void Board::moveBlocks(int indexreceiver, int indexsender)
 {
     TABAct[indexreceiver]->setvalue((TABAct[indexsender]->getvalue()));;
     TABAct[indexsender]->setvalue(0);
+
 }
 bool Board::verifyCommand(int id_move){
     checkforPairs(id_move,false);
@@ -306,7 +310,6 @@ void Board::goUP()
         int col_aux;
         bool command_fusion = verifyCommand(1);
         checkforPairs(1,command_fusion); //make fusion of fusionable elements
-        cout<<"Passou pela fusao"<<endl;
         index_mobileBlocks = checkMouvLimits(1); //getting index vector of mobile blocks
         for (auto & index : index_mobileBlocks) //iterating within the index vector
         {
@@ -324,6 +327,7 @@ void Board::goUP()
         savegame();
         boardSignal();
     }
+    winGame();
 }
 void Board::goDown()
 {
@@ -352,6 +356,7 @@ void Board::goDown()
         savegame();
         boardSignal();
     }
+    winGame();
 }
 void Board::goLeft()
 {
@@ -380,6 +385,7 @@ void Board::goLeft()
         savegame();
         boardSignal();
     }
+    winGame();
 }
 void Board::goRight()
 {
@@ -408,26 +414,25 @@ void Board::goRight()
         savegame();
         boardSignal();
     }
+    winGame();
 }
 //Gestion de memoire
 void Board::allocateActualBoard()
 {
-    if (nb_rounds == 0){
-        TABAct = new Block*[dimension*dimension];
-        int row_count = 0;
-        int col_count = -1;
-        int aux = dimension;
-        for (int i=0;i<dimension*dimension;i++)
+    TABAct = new Block*[dimension*dimension];
+    int row_count = 0;
+    int col_count = -1;
+    int aux = dimension;
+    for (int i=0;i<dimension*dimension;i++)
+    {
+        if(i == aux)
         {
-            if(i == aux)
-            {
-                row_count++;
-                aux = aux+dimension;
-                col_count = -1;
-            }
-            col_count++;
-            TABAct[i] = new Block(row_count,col_count);
+            row_count++;
+            aux = aux+dimension;
+            col_count = -1;
         }
+        col_count++;
+        TABAct[i] = new Block(row_count,col_count);
     }
     histIntTAB = new int**[1];
     histIntTAB[0] = new int*[dimension];
@@ -439,7 +444,6 @@ void Board::allocateActualBoard()
             ((histIntTAB[0])[i])[j] = TABAct[j+dimension*i]->getvalue();
         }
     }
-    countnewround();
     setscore(nb_rounds);
 }
 void Board::destroyActualBoard()
@@ -463,39 +467,57 @@ void Board::destroyActualBoard()
     }
 }
 void Board::savegame(){
-    int*** aux_int;
-    aux_int = new int**[nb_rounds+1];
-    for(int i=0;i<nb_rounds+1;i++){
-        aux_int[i] = new int*[dimension];
-    }
-    for(int i=0;i<nb_rounds+1;i++){
-        for(int j=0;j<dimension;j++){
-            (aux_int[i])[j] = new int[dimension];
+    bool verifiy_change = false;
+    if(nb_rounds>1)
+    {
+        for (int i=0;i<dimension;i++)
+        {
+            for (int j=0;j<dimension;j++)
+            {
+                if(histIntTAB[nb_rounds-1][i][j]!=TABAct[i+dimension*j]->getvalue())
+                    verifiy_change = true;
+            }
+
         }
     }
-    for(int i=0;i<nb_rounds;i++){
-        for(int j=0;j<dimension;j++){
-            for(int k=0; k<dimension; k++){
-                ((aux_int[i])[j])[k] = ((histIntTAB[i])[j])[k];
+    else {
+        verifiy_change = true;
+    }
+    if(verifiy_change)
+    {
+        int*** aux_int;
+        aux_int = new int**[nb_rounds+1];
+        for(int i=0;i<nb_rounds+1;i++){
+            aux_int[i] = new int*[dimension];
+        }
+        for(int i=0;i<nb_rounds+1;i++){
+            for(int j=0;j<dimension;j++){
+                (aux_int[i])[j] = new int[dimension];
             }
         }
-    }
-    for(int i=0;i<dimension;i++){
-        for(int j=0; j<dimension; j++){
-            ((aux_int[nb_rounds])[i])[j] = TABAct[i+dimension*j]->getvalue();
+        for(int i=0;i<nb_rounds;i++){
+            for(int j=0;j<dimension;j++){
+                for(int k=0; k<dimension; k++){
+                    ((aux_int[i])[j])[k] = ((histIntTAB[i])[j])[k];
+                }
+            }
         }
-    }
+        for(int i=0;i<dimension;i++){
+            for(int j=0; j<dimension; j++){
+                ((aux_int[nb_rounds])[i])[j] = TABAct[i+dimension*j]->getvalue();
+            }
+        }
 
-    for(int i=0;i<nb_rounds;i++){
-        for(int j=0;j<dimension;j++){
-            delete (histIntTAB[i])[j];
+        for(int i=0;i<nb_rounds;i++){
+            for(int j=0;j<dimension;j++){
+                delete (histIntTAB[i])[j];
+            }
+            delete histIntTAB[i];
         }
-        delete histIntTAB[i];
+        delete [] histIntTAB;
+        histIntTAB = aux_int;
+        countnewround();
     }
-    delete [] histIntTAB;
-    cout<<status<<endl;
-    histIntTAB = aux_int;
-    countnewround();
 }
 
 
@@ -550,10 +572,10 @@ void Board::setdimension(int dim)
 {
     if(dim>2)
     {
-        dimension = dim;
         destroyActualBoard();
+        dimension = dim;
         allocateActualBoard();
-        createNewBlock(true);
+        newGame();
     }
 }
 
@@ -561,6 +583,14 @@ void Board::setdimension(int dim)
 void Board::newGame()
 {
     setround(1);
+    QMLBlockIndexX = 0;
+    QMLBlockIndexY = 0;
+    QMLBlockIndexColor = 0;
+    QMLBlockIndexNumber = 0;
+    QMLBlockIndexTextColor = 0;
+    verify_win = false;
+    verify_lost = false;
+    fusion_possible = false;
     setstatus('P');
     for (int i=0;i<dimension*dimension;i++)
     {
@@ -574,7 +604,7 @@ void Board::newGame()
 void Board::endGame(){
     bool verify_zeros = true;
     for(int i=0;i<dimension*dimension;i++) {
-        if(TABAct[i]->getvalue()!=0){
+        if(TABAct[i]->getvalue()==0){
             verify_zeros = false;
         }
     }
@@ -585,8 +615,10 @@ void Board::endGame(){
         if(fusion_possible==false){
             setstatus('L');
             cout << "You lost." << endl;
+            verify_lost = true;
         }
     }
+    boardSignal();
 }
 
 void Board::winGame(){
@@ -594,8 +626,10 @@ void Board::winGame(){
         if(TABAct[i]->getvalue()==2048){
             setstatus('L');
             cout << "You won !" << endl;
+            verify_win = true;
         }
     }
+    boardSignal();
 }
 
 void Board::undoPlay()
@@ -687,6 +721,15 @@ int Board::sendBlockY()
     yBlock = (col_block*85)+10;
     return yBlock;
 }
+bool Board::sendwin()
+{
+    return verify_win;
+}
+bool Board::sendlost()
+{
+    return verify_lost;
+}
+
 Board::~Board()
 {
     destroyActualBoard();

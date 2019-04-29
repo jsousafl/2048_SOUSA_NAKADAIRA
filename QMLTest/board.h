@@ -70,6 +70,10 @@ public:
     int sendBlockX();
     Q_PROPERTY(int posY READ sendBlockY NOTIFY boardSignal)
     int sendBlockY();
+    Q_PROPERTY(bool verify_win READ sendwin NOTIFY boardSignal)
+    bool sendwin();
+    Q_PROPERTY(bool verify_lost READ sendlost NOTIFY boardSignal)
+    bool sendlost();
 
 
 signals:
@@ -90,6 +94,8 @@ private:
     bool end_game;
     bool fusion_possible;
     char status; //W->winner, L->>loser, P->playing
+    bool verify_win;
+    bool verify_lost;
 
     void allocateActualBoard();
     void destroyActualBoard();
