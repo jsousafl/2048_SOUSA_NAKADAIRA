@@ -23,7 +23,7 @@ Pour lancer le programme en utilisant Qt Creator, il faut faire les étapes suiv
 ## Description:
   
   Le but du jeux est de déplacer les carrés numérotés et combiner ceux qui ont la même valeur. La combinaison des carrés de même valeur résulte en un carré de valeur égal à leur somme.  
-  Après lancer le programme, une fenêtre s'ouvre avec un tableau de dimension 4x4. Le déplacement des carrés sont fait à partir des flèches du clavier.  
+  Après lancer le programme, une fenêtre s'ouvre avec un tableau de dimension 4x4. Le déplacement des carrés est fait à partir des flèches du clavier.  
   La fenêtre est composée par :  
   * Le score du match en cours et le meilleur score des matchs déjà joués affichés en haut de la fenêtre ; 
   * Le button "New Game" qui permet de démarrer un nouveau match ;
