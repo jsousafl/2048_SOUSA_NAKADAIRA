@@ -28,7 +28,7 @@ Pour lancer le programme en utilisant Qt Creator, il faut faire les étapes suiv
   * Le score du match en cours et le meilleur score des matchs déjà joués affichés en haut de la fenêtre ; 
   * Le button "New Game" qui permet de démarrer un nouveau match ;
   * Le button "Undo" qui permet de retourner au dernier mouvement fait ;
-  * Les buttons "4x4", "5x5" et "6x6" qui permettent de redimensionner le tableau à la taille choisie. Ces buttons démarrent une nouvelle partie ;
+  * Les buttons "4x4", "5x5" et "6x6" qui permettent de redimensionner le tableau à la taille choisie. Ces buttons démarrent une nouvelle partie ;  
   S'il n'y a plus de mouvements possibles, une nouvelle fenêtre s'ouvre avec le message "YOU LOST ! Click to start a new game" et on peut cliquer sur toute la fenêtre pour démarrer un nouveau match.  
   Si on arrive à faire un bloc de valeur 2048, une nouvelle fenêtre s'ouvre avec le message "YOU WON ! Click to start a new game" et on peut cliquer sur toute la fenêtre pour démarrer un nouveau match.  
 
